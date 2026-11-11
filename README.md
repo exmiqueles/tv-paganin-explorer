@@ -31,7 +31,7 @@ See `validation/validation.md` (also embedded in the page under *Validation repo
 cd validation
 node validate.js && node tests.js                       # Node >= 18
 python browser_tests.py ../index.html inputs # Playwright + Chromium
-python make_ref.py ratio_samantha.npy                    # regenerate the Python reference (ref/)
+python make_ref.py ratio.npy                 # regenerate the Python reference (ref/)
 python make_ref_quant.py ratio_samantha.npy
 ```
 
@@ -49,4 +49,4 @@ Red-currant propagation-based X-ray image from S. Berujon and E. Ziegler, *Phys.
 
 ## Use of AI
 
-The browser implementation (`src/`), the validation scripts and this README were developed with the assistance of Claude (Anthropic), from the authors' reference Python implementation, and checked against it as described in `validation/validation.md`. A first version was also reviewed with ChatGPT (OpenAI).
+The browser implementation (`src/`), the validation scripts and this README were developed with the assistance of Claude (Anthropic), from the authors' reference Python implementation, and checked against it as described in `validation/validation.md`.
