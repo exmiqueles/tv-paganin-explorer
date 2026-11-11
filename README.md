@@ -32,7 +32,7 @@ cd validation
 node validate.js && node tests.js                       # Node >= 18
 python browser_tests.py ../index.html inputs # Playwright + Chromium
 python make_ref.py ratio.npy                 # regenerate the Python reference (ref/)
-python make_ref_quant.py ratio_samantha.npy
+python make_ref_quant.py ratio.npy
 ```
 
 ## Building
