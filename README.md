@@ -4,7 +4,7 @@ Interactive companion to
 
 > E. X. Miqueles and D. M. Paganin, *A total-variation extension of Paganin-method phase retrieval and its flux-field interpretation* (submitted).
 
-**Live version:** `https://<your-user>.github.io/tv-paganin-explorer/` *(enable GitHub Pages: Settings → Pages → branch `main`, folder `/`)*
+**Live version:** `https://exmiqueles.github.io/tv-paganin-explorer/`
 
 `index.html` is a single, self-contained page (no external dependencies, works offline). It embeds the red-currant dataset used in the paper and computes, in the browser:
 
