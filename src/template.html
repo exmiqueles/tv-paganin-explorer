@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV–Paganin explorer</title>
+<style>
+  :root{
+    --bg:#f6f5f2; --panel:#ffffff; --ink:#1d1f23; --muted:#6b6f76; --line:#e2e0db;
+    --accent:#1f5fbf; --accent-soft:#e7eefa; --warn:#a4501b; --warn-soft:#fbeee4; --ok:#2d7a46; --ok-soft:#e4f3e9; --err:#b42318;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{padding:18px 24px 10px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{margin:0;font-size:19px;font-weight:650;letter-spacing:-.01em}
+  header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+  .wrap{display:grid;grid-template-columns:340px 1fr;min-height:calc(100vh - 70px)}
+  aside{border-right:1px solid var(--line);background:var(--panel);padding:12px 16px 30px;overflow:auto;max-height:calc(100vh - 70px);position:sticky;top:0}
+  main{padding:16px 20px 40px}
+  section.ctl{border-bottom:1px solid var(--line);padding:12px 0 14px}
+  section.ctl:last-child{border-bottom:none}
+  section.ctl h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;font-weight:650}
+  label{display:block;font-size:13px;margin:6px 0 2px}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+  input[type=number],input[type=text]{width:100%;padding:4px 6px;border:1px solid var(--line);border-radius:5px;font:13px var(--mono);background:#fff}
+  input:disabled{background:#f1f0ec;color:#9a9da3}
+  input[type=range]{width:100%}
+  .slider{display:grid;grid-template-columns:1fr 92px;gap:8px;align-items:center}
+  button{font:inherit;font-size:13px;padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:#fff;cursor:pointer}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button:disabled{opacity:.45;cursor:default}
+  .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .hint{color:var(--muted);font-size:12px;margin-top:4px}
+  .status{font:12px var(--mono);background:var(--accent-soft);border-radius:6px;padding:6px 8px;margin-top:8px;white-space:pre-line;min-height:1.6em}
+  .status.err{background:#fde8e6;color:var(--err)}
+  .badge{display:block;font-size:12px;border-radius:8px;padding:6px 9px;margin-top:8px;line-height:1.4}
+  .badge.heat{background:var(--warn-soft);color:var(--warn)}
+  .badge.tv{background:var(--ok-soft);color:var(--ok)}
+  #overview{width:100%;border-radius:6px;cursor:crosshair;display:block;background:#ddd}
+  .panels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
+  .card h3{margin:0 0 6px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+  .card h3 small{font-weight:400;color:var(--muted);font:11px var(--mono);text-align:right}
+  .card canvas{width:100%;display:block;border-radius:4px;background:#eee}
+  .img canvas{cursor:crosshair}
+  .stale{color:var(--err)!important;font-weight:600!important}
+  .wide{grid-column:span 3}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:4px;flex-wrap:wrap}
+  .legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px}
+  .cbar{height:8px;border-radius:3px;margin-top:6px}
+  .cbarlab{display:flex;justify-content:space-between;font:11px var(--mono);color:var(--muted)}
+  .opt{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-top:6px}
+  .note{font-size:11px;color:var(--muted);margin-top:4px}
+  #log{font:11.5px/1.5 var(--mono);white-space:pre-wrap;color:#333;max-height:430px;overflow:auto}
+  footer{color:var(--muted);font-size:12px;margin-top:22px;line-height:1.55}
+  details{margin-top:6px} summary{cursor:pointer;color:var(--accent);font-size:13px}
+  #valtext{font:11px/1.45 var(--mono);white-space:pre-wrap;background:#fafafa;border:1px solid var(--line);border-radius:6px;padding:8px;max-height:420px;overflow:auto}
+  @media (max-width: 1150px){.panels{grid-template-columns:repeat(2,minmax(0,1fr))}.wide{grid-column:span 2}}
+  @media (max-width: 760px){.wrap{grid-template-columns:1fr}aside{position:static;max-height:none}.panels{grid-template-columns:1fr}.wide{grid-column:span 1}}
+</style>
+</head>
+<body>
+<header>
+  <h1>TV–Paganin explorer <span style="font-weight:400;color:var(--muted);font-size:13px">v<span id="ver"></span></span></h1>
+  <p>Interactive companion to <em>“A total-variation extension of Paganin-method phase retrieval and its flux-field interpretation”</em> (E. X. Miqueles &amp; D. M. Paganin). Everything runs locally in your browser.</p>
+</header>
+<div class="wrap">
+<aside>
+  <section class="ctl">
+    <h2>1 · Data</h2>
+    <div class="row">
+      <label style="margin:0"><input type="radio" name="src" value="paper" checked> Red currant (paper)</label>
+      <label style="margin:0"><input type="radio" name="src" value="upload"> Upload</label>
+    </div>
+    <input type="file" id="file" accept=".npy,image/*" style="margin-top:6px;display:none">
+    <div class="hint" id="uploadHint" style="display:none">Input must be the normalized ratio <b>r = I/I₀</b>. <code>.npy</code> (2D, numeric) is preferred; 8-bit images are read as gray/255. Non-finite values are rejected.</div>
+    <div class="status" id="dataInfo">loading…</div>
+  </section>
+
+  <section class="ctl">
+    <h2>2 · Region</h2>
+    <canvas id="overview"></canvas>
+    <div class="hint">Drag on the image to select a region (dashed box).</div>
+    <div class="grid2" style="margin-top:6px">
+      <div><label>x₀</label><input type="number" id="rx" min="0" step="1"></div>
+      <div><label>y₀</label><input type="number" id="ry" min="0" step="1"></div>
+      <div><label>width</label><input type="number" id="rw" min="16" step="1"></div>
+      <div><label>height</label><input type="number" id="rh" min="16" step="1"></div>
+    </div>
+    <div class="hint" id="roiInfo"></div>
+  </section>
+
+  <section class="ctl">
+    <h2>3 · Paganin (L₂ proximal)</h2>
+    <div class="grid2">
+      <div><label>z [m]</label><input type="number" id="z" step="0.01"></div>
+      <div><label>energy [keV]</label><input type="number" id="E" step="0.1"></div>
+      <div><label>pixel [µm]</label><input type="number" id="pix" step="0.01"></div>
+      <div><label>δ/β</label><input type="number" id="db" step="1"></div>
+    </div>
+    <label>ℓ<sub>PAG</sub> = zδ/μ [pixel²]</label>
+    <input type="number" id="ellPag" step="0.1">
+    <div class="hint">Computed from the fields above (μ = 4πβ/λ); can be typed directly. Kernel 1/(1+ℓ<sub>PAG</sub>|q|²), q in rad/pixel; edge padding of 100 px.</div>
+  </section>
+
+  <section class="ctl">
+    <h2>4 · TV proximal (Algorithm 1)</h2>
+    <label>ℓ<sub>TV</sub> [units of r × pixel]</label>
+    <div class="slider"><input type="range" id="ellTvLog" min="-4" max="4" step="0.05"><input type="number" id="ellTv" step="any"></div>
+    <div class="hint" id="kappa"></div>
+    <div class="grid2">
+      <div><label>τ (0 &lt; τ &lt; 1/4)</label><input type="number" id="tau" step="0.005"></div>
+      <div><label>gap tolerance ε</label><input type="number" id="eps" step="any"></div>
+      <div><label>max iterations</label><input type="number" id="maxIt" step="100"></div>
+    </div>
+    <canvas id="gapChart" height="110" style="width:100%;margin-top:8px;background:#fafafa;border-radius:6px"></canvas>
+    <div class="legend"><span><i style="background:#1f5fbf"></i>relative gap G<sub>k</sub> (log)</span><span><i style="background:#c2410c"></i>% pixels with ‖q‖&gt;1</span></div>
+    <div id="regime"></div>
+  </section>
+
+  <section class="ctl">
+    <h2>5 · Effective diffusivity D</h2>
+    <label>β</label>
+    <div class="slider"><input type="range" id="betaLog" min="-5" max="0" step="0.25"><input type="number" id="beta" step="any"></div>
+    <div class="grid2">
+      <div><label>α</label><input type="number" id="alpha" step="any" min="0"></div>
+      <div><label>z² (ℓ<sub>dark</sub>)</label><input type="number" id="ellDark" step="any"></div>
+      <div><label>tolerance</label><input type="number" id="dtol" step="any"></div>
+      <div><label>max iterations</label><input type="number" id="dmax" step="1000"></div>
+    </div>
+    <div class="hint">Minimizes ½⟨|ℓ<sub>TV</sub>p − ℓ<sub>PAG</sub>∇u + z²∇(Du)|²⟩ + ½α⟨|∇D|²⟩ + ½β⟨D²⟩ over D ≥ 0 (⟨·⟩: pixel mean), with u, p and ℓ<sub>TV</sub> of the last TV run.</div>
+  </section>
+
+  <section class="ctl">
+    <div class="btns">
+      <button class="primary" id="runAll">Run all</button>
+      <button id="runTV">Paganin + TV</button>
+      <button id="runD">D only</button>
+      <button id="stop" disabled>Stop</button>
+    </div>
+    <div class="status" id="status">ready</div>
+    <div class="btns">
+      <button id="presetDefault">Preset: 512² region</button>
+      <button id="presetPaper">Preset: paper (full image)</button>
+    </div>
+    <div class="hint">Presets set every parameter (data, region, Paganin, TV and D). The paper's Fig. 4 uses β = 10⁻¹…10⁻⁴; the presets use β = 10⁻².</div>
+    <details>
+      <summary>Export (.npy + metadata .json)</summary>
+      <div class="btns">
+        <button data-exp="r">r</button><button data-exp="uL2">u_L2</button><button data-exp="uTV">u_TV</button>
+        <button data-exp="p">p (2,H,W)</button><button data-exp="D">D</button><button data-exp="R">|R(D)|</button>
+        <button id="expMeta">metadata (.json)</button>
+      </div>
+      <div class="hint">File names share the run id. The metadata file records data, region, the parameters actually used, stopping criteria, convergence status and staleness of every result.</div>
+    </details>
+    <details>
+      <summary>Validation report</summary>
+      <div id="valtext"></div>
+    </details>
+  </section>
+</aside>
+
+<main>
+  <div class="panels">
+    <div class="card img"><h3><span>−log r</span> <small id="lab_r"></small></h3><canvas id="c_r"></canvas></div>
+    <div class="card img"><h3><span>−log u<sub>L₂</sub> (Paganin)</span> <small id="lab_l2"></small></h3><canvas id="c_l2"></canvas></div>
+    <div class="card img"><h3><span>−log u<sub>TV</sub></span> <small id="lab_tv"></small></h3><canvas id="c_tv"></canvas></div>
+    <div class="card img"><h3><span>‖p‖</span> <small id="lab_p"></small></h3><canvas id="c_p"></canvas>
+      <div class="cbar" style="background:linear-gradient(90deg,#fff,#000)"></div><div class="cbarlab"><span>0</span><span>1</span></div>
+      <label class="opt"><input type="checkbox" id="satOv"> mark ‖p‖ = 1 in red</label></div>
+    <div class="card img"><h3><span>orientation of p</span> <small id="lab_o"></small></h3><canvas id="c_o"></canvas>
+      <div class="note">Hue = direction of p (wheel; image axes, y pointing down); fades to white where ‖p‖ is small.</div></div>
+    <div class="card img"><h3><span>u<sub>TV</sub> − r = ℓ<sub>TV</sub> div p</span> <small id="lab_res"></small></h3><canvas id="c_res"></canvas>
+      <div class="cbar" style="background:linear-gradient(90deg,#2b59c3,#fff,#c0392b)"></div><div class="cbarlab"><span id="res_lo"></span><span>0</span><span id="res_hi"></span></div></div>
+    <div class="card img"><h3><span>D</span> <small id="lab_d"></small></h3><canvas id="c_d"></canvas>
+      <div class="cbar" style="background:linear-gradient(90deg,#440154,#3b528b,#21918c,#5ec962,#fde725)"></div>
+      <div class="cbarlab"><span>0</span><span id="dmaxlab"></span></div></div>
+    <div class="card img"><h3><span>|R(D)|, flux-fit residual</span> <small id="lab_R"></small></h3><canvas id="c_R"></canvas>
+      <div class="cbar" style="background:linear-gradient(90deg,#fff,#000)"></div><div class="cbarlab"><span>0</span><span id="Rmaxlab"></span></div></div>
+    <div class="card"><h3><span>Run log</span> <small>parameters actually used</small></h3><div id="log"></div></div>
+    <div class="card wide"><h3><span>Line profile</span> <small id="lab_prof">click on any image to choose the row</small></h3>
+      <canvas id="c_prof" height="190"></canvas>
+      <div class="legend"><span><i style="background:#1f77b4"></i>−log r</span><span><i style="background:#ff7f0e"></i>−log u<sub>L₂</sub></span><span><i style="background:#2ca02c"></i>−log u<sub>TV</sub></span></div>
+    </div>
+  </div>
+  <footer>
+    The browser implementation was developed with the assistance of Claude (Anthropic) and validated against the reference Python implementation used for the paper (see “Validation report”).
+  </footer>
+</main>
+</div>
+
+<script id="core-src" type="text/plain">%%CORE%%</script>
+<script id="data-src" type="text/plain">%%DATA%%</script>
+<script id="val-src" type="text/plain">%%VALIDATION%%</script>
+<script>
+"use strict";
+const DATA_META = %%META%%;
+const coreSrc = document.getElementById("core-src").textContent;
+const Core = new Function(coreSrc + "\nreturn Core;")();
+const $ = (id) => document.getElementById(id);
+$("ver").textContent = Core.VERSION;
+$("valtext").textContent = document.getElementById("val-src").textContent.trim();
+
+// ------------------------------------------------------------ worker
+const workerSrc = coreSrc + `
+self.onmessage = (e) => {
+  const m = e.data;
+  try {
+    if (m.cmd === "paganin") {
+      const t = performance.now();
+      const u = Core.paganin(m.r, m.H, m.W, m.L);
+      self.postMessage({ type: "paganin", u, ms: performance.now() - t }, [u.buffer]);
+    } else if (m.cmd === "tv") {
+      const t = performance.now();
+      const res = Core.chambolle(m.r, m.H, m.W, m.ell, m.tau, m.eps, m.maxIt, (k, G, sat) => {
+        self.postMessage({ type: "tvprog", k, G, sat, ms: (performance.now() - t) / k });
+      }, m.every);
+      const out = { type: "tv", u: res.u, p0: res.p0, p1: res.p1, nit: res.nit, G: res.G, gap: res.gap, Ep: res.Ep, sat: res.sat,
+                    stop: res.stop, regime: res.regime, Ghist: Float64Array.from(res.Ghist), Shist: Float64Array.from(res.Shist), ms: performance.now() - t };
+      self.postMessage(out, [out.u.buffer, out.p0.buffer, out.p1.buffer]);
+    } else if (m.cmd === "D") {
+      const t = performance.now();
+      const res = Core.estimateD(m.u, m.p0, m.p1, m.H, m.W, m.opt, (k, rel) => {
+        self.postMessage({ type: "dprog", k, rel, ms: (performance.now() - t) / k });
+      });
+      self.postMessage({ type: "D", D: res.D, Rmag: res.Rmag, nit: res.nit, rel: res.rel, reason: res.reason, loss: res.loss,
+                         relResidual: res.relResidual, strictlyConvex: res.strictlyConvex, ms: performance.now() - t }, [res.D.buffer, res.Rmag.buffer]);
+    }
+  } catch (err) { self.postMessage({ type: "error", msg: String(err && err.message || err) }); }
+};`;
+const workerURL = URL.createObjectURL(new Blob([workerSrc], { type: "text/javascript" }));
+let worker = null, busy = false;
+function newWorker() { if (worker) worker.terminate(); worker = new Worker(workerURL); }
+function call(msg, transfer, onProg) {
+  return new Promise((resolve, reject) => {
+    worker.onmessage = (e) => {
+      const d = e.data;
+      if (d.type === "tvprog" || d.type === "dprog") { onProg && onProg(d); return; }
+      if (d.type === "error") { reject(new Error(d.msg)); return; }
+      resolve(d);
+    };
+    worker.onerror = (e) => reject(new Error(e.message));
+    worker.postMessage(msg, transfer || []);
+  });
+}
+
+// ------------------------------------------------------------ state
+// S.ver increases whenever data or region change (or a run is stopped); a result is accepted only if S.ver is unchanged.
+// Every result stores the parameters it was computed with; results whose parameters differ from the current
+// controls are labelled STALE, and D refuses to run on a TV result computed with other TV parameters.
+const S = { full: null, H: 0, W: 0, dataLabel: "", dataInfo: {}, dataId: "", roi: { x: 600, y: 700, w: 512, h: 512 }, ver: 0,
+            r: null, rh: 0, rw: 0, rHash: "", row: null, win: [0, 1], medGrad: NaN,
+            L2: null, TV: null, DD: null, tvCount: 0, live: { G: [], S: [] }, runId: null };
+const now = () => new Date().toISOString();
+const num = (id) => Number($(id).value);
+
+// ------------------------------------------------------------ parameters (read + validate)
+function readPaganin() { return { ellPag: num("ellPag") }; }
+function readPhysical() { return { z_m: num("z"), energy_keV: num("E"), pixel_um: num("pix"), delta_over_beta: num("db") }; }
+function readTV() { return { ellTV: num("ellTv"), tau: num("tau"), eps: num("eps"), maxIt: num("maxIt") }; }
+function readD() { return { lambda: num("ellPag"), ellDark: num("ellDark"), alpha: num("alpha"), beta: num("beta"), tol: num("dtol"), maxIter: num("dmax"), D0: 1 }; }
+function validate(stage) {
+  const err = [], warn = [];
+  const fin = (v) => typeof v === "number" && isFinite(v), isInt = (v) => fin(v) && Math.floor(v) === v;
+  if (!S.r) err.push("no data loaded");
+  const T = readTV(), D = readD();
+  if (!(fin(num("ellPag")) && num("ellPag") >= 0)) err.push("ℓ_PAG must be a finite number ≥ 0");
+  if (stage !== "D") {
+    if (!(fin(T.ellTV) && T.ellTV > 0)) err.push("ℓ_TV must be a finite number > 0");
+    if (!(fin(T.tau) && T.tau > 0 && T.tau < 0.25)) err.push("τ must satisfy 0 < τ < 1/4");
+    if (!(fin(T.eps) && T.eps > 0 && T.eps < 1)) err.push("gap tolerance ε must satisfy 0 < ε < 1");
+    if (!(isInt(T.maxIt) && T.maxIt >= 1 && T.maxIt <= 1e6)) err.push("TV max iterations must be an integer in [1, 10⁶]");
+  }
+  if (stage !== "TV") {
+    if (!(fin(D.ellDark) && D.ellDark > 0)) err.push("z² (ℓ_dark) must be a finite number > 0");
+    if (!(fin(D.alpha) && D.alpha >= 0)) err.push("α must be a finite number ≥ 0");
+    if (!(fin(D.beta) && D.beta >= 0)) err.push("β must be a finite number ≥ 0");
+    if (!(fin(D.tol) && D.tol > 0 && D.tol < 1)) err.push("D tolerance must satisfy 0 < tol < 1");
+    if (!(isInt(D.maxIter) && D.maxIter >= 1 && D.maxIter <= 1e7)) err.push("D max iterations must be an integer in [1, 10⁷]");
+    if (fin(D.beta) && D.beta === 0) warn.push("β = 0: the functional is not strictly convex; the minimizer may not be unique");
+  }
+  return { err, warn };
+}
+const sameParams = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+// ------------------------------------------------------------ data loading
+async function loadPaperData() {
+  const b64 = document.getElementById("data-src").textContent.trim();
+  const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const buf = await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  const H = DATA_META.H, W = DATA_META.W, N = H * W, scale = (DATA_META.rmax - DATA_META.rmin) / 65535.0;
+  const r = new Float64Array(N);
+  for (let y = 0; y < H; y++) {
+    let q = 0;
+    for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      q = (q + (bytes[i] | (bytes[N + i] << 8))) & 0xFFFF;   // row-wise delta, byte planes
+      r[i] = DATA_META.rmin + q * scale;
+    }
+  }
+  setFull(r, H, W, "Red currant, 17 keV, z = 1 m, 5.8 µm pixels (Berujon & Ziegler, ESRF)",
+          { id: "red-currant-paper", quantization: { bits: 16, rmin: DATA_META.rmin, rmax: DATA_META.rmax, step: scale } });
+}
+async function loadUpload(file) {
+  const name = file.name.toLowerCase();
+  let r, H, W;
+  if (name.endsWith(".npy")) { const a = Core.parseNpy(await file.arrayBuffer()); r = a.data; H = a.H; W = a.W; }
+  else {
+    const bmp = await createImageBitmap(file);
+    const c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height;
+    const ctx = c.getContext("2d"); ctx.drawImage(bmp, 0, 0);
+    const d = ctx.getImageData(0, 0, c.width, c.height).data;
+    H = c.height; W = c.width; r = new Float64Array(H * W);
+    for (let i = 0; i < H * W; i++) r[i] = (0.299 * d[4 * i] + 0.587 * d[4 * i + 1] + 0.114 * d[4 * i + 2]) / 255;
+  }
+  if (H < 16 || W < 16) throw new Error(`image too small (${W}×${H}); minimum 16×16`);
+  let bad = 0; for (let i = 0; i < r.length; i++) if (!isFinite(r[i])) bad++;
+  if (bad) throw new Error(`${bad} non-finite values (NaN/Inf) in the input; please clean the data first`);
+  setFull(r, H, W, file.name, { id: "upload:" + file.name, source: name.endsWith(".npy") ? "npy" : "8-bit image / 255" });
+  const s = Math.min(512, H, W);
+  setROI(Math.floor((W - s) / 2), Math.floor((H - s) / 2), s, s);
+}
+function hashArray(a) {   // FNV-1a over the float64 bytes (identifies the input region in the metadata)
+  const b = new Uint8Array(a.buffer, a.byteOffset, a.byteLength); let h = 0x811c9dc5;
+  for (let i = 0; i < b.length; i++) { h ^= b[i]; h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, "0");
+}
+function setFull(r, H, W, label, info) {
+  S.full = r; S.H = H; S.W = W; S.dataLabel = label; S.dataInfo = info; S.dataId = info.id;
+  let mn = Infinity, mx = -Infinity, nonpos = 0;
+  for (let i = 0; i < r.length; i++) { if (r[i] < mn) mn = r[i]; if (r[i] > mx) mx = r[i]; if (r[i] <= 0) nonpos++; }
+  const g = [], step = Math.max(1, Math.floor(Math.sqrt(H * W / 2e5)));
+  for (let y = 0; y < H - 1; y += step) for (let x = 0; x < W - 1; x += step) { const i = y * W + x; g.push(Math.hypot(r[i + W] - r[i], r[i + 1] - r[i])); }
+  g.sort((a, b) => a - b); S.medGrad = g[g.length >> 1];
+  $("dataInfo").textContent = `${label}\n${W} × ${H} px · r ∈ [${mn.toPrecision(4)}, ${mx.toPrecision(4)}]\nmedian ‖∇r‖ = ${S.medGrad.toExponential(2)}` +
+    (info.quantization ? `\nembedded as 16-bit integers (step ${info.quantization.step.toExponential(2)} in r)` : "") +
+    (nonpos ? `\n⚠ ${nonpos} pixels with r ≤ 0 (shown in magenta)` : "");
+  $("dataInfo").className = "status";
+  drawOverview(); updKappa();
+}
+
+// ------------------------------------------------------------ display helpers
+function percentile(arr, ps, filter) {
+  const n = arr.length, step = Math.max(1, Math.floor(n / 200000)), s = [];
+  for (let i = 0; i < n; i += step) { const v = arr[i]; if (isFinite(v) && (!filter || filter(v))) s.push(v); }
+  if (!s.length) return ps.map(() => 0);
+  s.sort((a, b) => a - b);
+  return ps.map(p => s[Math.min(s.length - 1, Math.max(0, Math.round(p / 100 * (s.length - 1))))]);
+}
+const MAGENTA = [217, 70, 239];
+function viridis(t) {
+  t = Math.min(1, Math.max(0, t));
+  const c0 = [0.2777273272234177, 0.005407344544966578, 0.3340998053353061], c1 = [0.1050930431085774, 1.404613529898575, 1.384590162594685],
+        c2 = [-0.3308618287255563, 0.214847559468213, 0.09509516302823659], c3 = [-4.634230498983486, -5.799100973351585, -19.33244095627987],
+        c4 = [6.228269936347081, 14.17993336680509, 56.69055260068105], c5 = [4.776384997670288, -13.74514537774601, -65.35303263337234],
+        c6 = [-5.435455855934631, 4.645852612178535, 26.3124352495832];
+  const o = [0, 0, 0];
+  for (let j = 0; j < 3; j++) o[j] = 255 * Math.min(1, Math.max(0, c0[j] + t * (c1[j] + t * (c2[j] + t * (c3[j] + t * (c4[j] + t * (c5[j] + t * c6[j])))))));
+  return o;
+}
+const VIR = Array.from({ length: 256 }, (_, i) => viridis(i / 255));
+function hsv(h) {  // matplotlib "hsv" colormap (s = v = 1)
+  h = ((h % 1) + 1) % 1;
+  const i = Math.floor(h * 6) % 6, f = h * 6 - Math.floor(h * 6);
+  return [[1, f, 0], [1 - f, 1, 0], [0, 1, f], [0, 1 - f, 1], [f, 0, 1], [1, 0, 1 - f]][i].map(v => 255 * v);
+}
+function paint(canvas, H, W, fn) {
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d"), im = ctx.createImageData(W, H), d = im.data;
+  for (let i = 0; i < H * W; i++) { const c = fn(i); d[4 * i] = c[0]; d[4 * i + 1] = c[1]; d[4 * i + 2] = c[2]; d[4 * i + 3] = 255; }
+  ctx.putImageData(im, 0, 0);
+}
+// gray map of -log(v); v <= 0 -> magenta and counted (no clipping)
+function paintNlog(canvas, arr, H, W) {
+  const [lo, hi] = S.win, s = 255 / (hi - lo || 1); let nonpos = 0;
+  paint(canvas, H, W, (i) => { const v = arr[i]; if (!(v > 0)) { nonpos++; return MAGENTA; } const g = Math.max(0, Math.min(255, (-Math.log(v) - lo) * s)); return [g, g, g]; });
+  drawRowLine(canvas);
+  return nonpos;
+}
+function drawRowLine(canvas) {
+  if (S.row === null) return;
+  const ctx = canvas.getContext("2d");
+  ctx.strokeStyle = "rgba(220,38,38,.9)"; ctx.lineWidth = Math.max(1, canvas.width / 400); ctx.setLineDash([6, 4]);
+  ctx.beginPath(); ctx.moveTo(0, S.row + .5); ctx.lineTo(canvas.width, S.row + .5); ctx.stroke(); ctx.setLineDash([]);
+}
+function blank(c, H, W) { c.width = W; c.height = H; const ctx = c.getContext("2d"); ctx.fillStyle = "#eceae6"; ctx.fillRect(0, 0, W, H); }
+
+function drawOverview() {   // paper Fig. 1 style: viridis, dashed white box
+  const c = $("overview"), H = S.H, W = S.W, f = Math.max(1, Math.ceil(Math.max(H, W) / 600));
+  const h = Math.floor(H / f), w = Math.floor(W / f), sm = new Float64Array(h * w);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const v = S.full[(y * f) * W + x * f]; sm[y * w + x] = v > 0 ? -Math.log(v) : NaN; }
+  const [lo, hi] = percentile(sm, [1, 99]); const s = 255 / (hi - lo || 1);
+  paint(c, h, w, (i) => isFinite(sm[i]) ? VIR[Math.max(0, Math.min(255, Math.round((sm[i] - lo) * s)))] : MAGENTA);
+  S.ovImg = c.getContext("2d").getImageData(0, 0, w, h); S.ovF = f;
+  drawROIbox();
+}
+function drawROIbox() {
+  if (!S.ovImg) return;
+  const c = $("overview"), ctx = c.getContext("2d"), f = S.ovF;
+  ctx.putImageData(S.ovImg, 0, 0);
+  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+  ctx.strokeRect(S.roi.x / f, S.roi.y / f, S.roi.w / f, S.roi.h / f); ctx.setLineDash([]);
+}
+function setROI(x, y, w, h) {
+  if (busy || !S.full) return;
+  if (![x, y, w, h].every(v => isFinite(v))) { status("region values must be finite numbers", true); return; }
+  w = Math.max(16, Math.min(S.W, Math.round(w))); h = Math.max(16, Math.min(S.H, Math.round(h)));
+  x = Math.max(0, Math.min(S.W - w, Math.round(x))); y = Math.max(0, Math.min(S.H - h, Math.round(y)));
+  S.roi = { x, y, w, h };
+  $("rx").value = x; $("ry").value = y; $("rw").value = w; $("rh").value = h;
+  const N = w * h, mb = (N * 8 * 16 / 1e6);
+  $("roiInfo").textContent = `${w} × ${h} = ${(N / 1e6).toFixed(2)} Mpx · ~${mb.toFixed(0)} MB working memory` + (N > 1.2e6 ? " · large: TV may take a few minutes" : "");
+  drawROIbox(); extractROI();
+}
+function extractROI() {
+  const { x, y, w, h } = S.roi;
+  S.ver++;                                   // invalidates every result and any pending response
+  S.r = new Float64Array(w * h); S.rh = h; S.rw = w;
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) S.r[j * w + i] = S.full[(y + j) * S.W + (x + i)];
+  S.rHash = hashArray(S.r);
+  S.L2 = S.TV = S.DD = null; S.row = Math.floor(h / 2); S.live = { G: [], S: [] }; $("regime").innerHTML = ""; drawGap([], []);
+  const [p1, p99] = percentile(S.r, [1, 99], v => v > 0);      // window of -log r: [-log p99(r), -log p1(r)]
+  S.win = [-Math.log(p99), -Math.log(p1)];
+  renderAll();
+}
+
+// ------------------------------------------------------------ staleness
+function staleness() {
+  const tvStale = !!S.TV && !sameParams(S.TV.params, readTV());
+  return {
+    L2: !!S.L2 && !sameParams(S.L2.params, readPaganin()),
+    TV: tvStale,
+    D: !!S.DD && (tvStale || !S.TV || S.DD.tvId !== S.TV.id || !sameParams(S.DD.params, readD())),
+  };
+}
+function setLab(id, text, stale) { const el = $(id); el.textContent = text + (stale && text ? " · STALE: parameters changed" : ""); el.classList.toggle("stale", !!stale && !!text); }
+
+// ------------------------------------------------------------ rendering
+function renderAll() {
+  if (!S.r) return;
+  const H = S.rh, W = S.rw;
+  S.np = { r: paintNlog($("c_r"), S.r, H, W) };
+  if (S.L2) S.np.l2 = paintNlog($("c_l2"), S.L2.u, H, W); else blank($("c_l2"), H, W);
+  if (S.TV) {
+    const T = S.TV;
+    S.np.tv = paintNlog($("c_tv"), T.u, H, W);
+    const ov = $("satOv").checked;
+    paint($("c_p"), H, W, (i) => {         // paper Fig. 3(a): gray_r, 0 white, 1 black
+      const mg = Math.hypot(T.p0[i], T.p1[i]), v = 255 * (1 - Math.min(1, mg));
+      return (ov && mg >= 1 - 1e-9) ? [220, 38, 38] : [v, v, v];
+    });
+    paint($("c_o"), H, W, (i) => {         // paper Fig. 3(b) colours: hsv of the direction angle, white background
+      const mg = Math.hypot(T.p0[i], T.p1[i]) / (T.pmax || 1);
+      const c = hsv((Math.atan2(T.p0[i], T.p1[i]) + Math.PI) / (2 * Math.PI)), a = Math.min(1, mg / 0.5);
+      return [255 + a * (c[0] - 255), 255 + a * (c[1] - 255), 255 + a * (c[2] - 255)];
+    });
+    drawWheel($("c_o"));
+    const res = new Float64Array(H * W); for (let i = 0; i < res.length; i++) res[i] = T.u[i] - S.r[i];
+    const [a, b] = percentile(res, [1, 99]); const mm = Math.max(Math.abs(a), Math.abs(b)) || 1;
+    paint($("c_res"), H, W, (i) => {
+      const t = Math.max(-1, Math.min(1, res[i] / mm));
+      return t >= 0 ? [255 - t * 63, 255 - t * 198, 255 - t * 212] : [255 + t * 212, 255 + t * 166, 255 + t * 60];
+    });
+    $("res_lo").textContent = (-mm).toExponential(1); $("res_hi").textContent = mm.toExponential(1);
+  } else { for (const id of ["c_tv", "c_p", "c_o", "c_res"]) blank($(id), H, W); $("res_lo").textContent = $("res_hi").textContent = ""; }
+  if (S.DD) {
+    const [hiD] = percentile(S.DD.D, [99.5]); const s = 255 / (hiD || 1);
+    paint($("c_d"), H, W, (i) => VIR[Math.max(0, Math.min(255, Math.round(S.DD.D[i] * s)))]);
+    $("dmaxlab").textContent = hiD.toExponential(2) + " (p99.5)";
+    const [hiR] = percentile(S.DD.Rmag, [99.5]); const sR = 255 / (hiR || 1);
+    paint($("c_R"), H, W, (i) => { const v = 255 - Math.max(0, Math.min(255, S.DD.Rmag[i] * sR)); return [v, v, v]; });
+    $("Rmaxlab").textContent = hiR.toExponential(2) + " (p99.5)";
+  } else { blank($("c_d"), H, W); blank($("c_R"), H, W); $("dmaxlab").textContent = $("Rmaxlab").textContent = ""; }
+  drawProfile(); updateLabels();
+}
+function updateLabels() {
+  if (!S.r) return;
+  const st = staleness(), np = S.np || {}, npTxt = (k) => np[k] ? ` · ${np[k]} px ≤ 0 (magenta)` : "";
+  setLab("lab_r", `x=${S.roi.x}, y=${S.roi.y}, ${S.rw}×${S.rh}` + npTxt("r"));
+  setLab("lab_l2", S.L2 ? `ℓ_PAG = ${S.L2.params.ellPag} px²` + npTxt("l2") : "", st.L2);
+  if (S.TV) {
+    const T = S.TV;
+    setLab("lab_tv", `ℓ_TV = ${T.params.ellTV} · ${T.info.nit} it` + npTxt("tv"), st.TV);
+    setLab("lab_p", `max ‖p‖ = ${T.pmax < 0.01 ? T.pmax.toExponential(1) : T.pmax.toFixed(3)}`, st.TV);
+    setLab("lab_o", `ℓ_TV = ${T.params.ellTV}`, st.TV); setLab("lab_res", `ℓ_TV = ${T.params.ellTV}`, st.TV);
+  } else for (const l of ["lab_tv", "lab_p", "lab_o", "lab_res"]) setLab(l, "");
+  if (S.DD) {
+    setLab("lab_d", `β = ${S.DD.params.beta} · ${S.DD.info.nit} it · ${S.DD.info.reason}`, st.D);
+    setLab("lab_R", `‖R(D)‖/‖R(0)‖ = ${S.DD.info.relResidual.toFixed(3)}`, st.D);
+  } else { setLab("lab_d", ""); setLab("lab_R", ""); }
+  writeLog(st);
+}
+function drawWheel(c) {
+  const ctx = c.getContext("2d"), R = Math.max(10, c.width * 0.07), cx = c.width - R - 6, cy = R + 6;
+  ctx.fillStyle = "rgba(255,255,255,.9)"; ctx.beginPath(); ctx.arc(cx, cy, R + 3, 0, 2 * Math.PI); ctx.fill();
+  for (let a = 0; a < 360; a++) {
+    const th = a * Math.PI / 180;                       // canvas angle, y down = image axes
+    const col = hsv((Math.atan2(Math.sin(th), Math.cos(th)) + Math.PI) / (2 * Math.PI));
+    ctx.strokeStyle = `rgb(${col.map(Math.round).join(",")})`; ctx.lineWidth = R * 0.5;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 0.72, th, th + Math.PI / 180 * 1.6); ctx.stroke();
+  }
+}
+function drawProfile() {
+  const c = $("c_prof"), dpr = window.devicePixelRatio || 1, cw = c.clientWidth || 800, ch = 190;
+  c.width = cw * dpr; c.height = ch * dpr; const ctx = c.getContext("2d"); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, cw, ch);
+  if (S.row === null || !S.r) return;
+  const W = S.rw, row = S.row;
+  const series = [[S.r, "#1f77b4", 1], [S.L2 && S.L2.u, "#ff7f0e", 1.6], [S.TV && S.TV.u, "#2ca02c", 1.6]];
+  let lo = Infinity, hi = -Infinity;
+  for (const [a] of series) if (a) for (let x = 0; x < W; x++) { const v = a[row * W + x]; if (v > 0) { lo = Math.min(lo, -Math.log(v)); hi = Math.max(hi, -Math.log(v)); } }
+  if (!isFinite(lo)) return;
+  const pad = 36, X = (x) => pad + (cw - pad - 8) * x / Math.max(1, W - 1), Y = (v) => 8 + (ch - 30) * (1 - (v - lo) / (hi - lo || 1));
+  ctx.strokeStyle = "#e2e0db"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pad, 8); ctx.lineTo(pad, ch - 22); ctx.lineTo(cw - 8, ch - 22); ctx.stroke();
+  ctx.fillStyle = "#6b6f76"; ctx.font = "11px ui-monospace,monospace";
+  ctx.fillText(hi.toFixed(2), 2, 14); ctx.fillText(lo.toFixed(2), 2, ch - 24);
+  ctx.fillText(`x = ${S.roi.x}`, pad, ch - 6); ctx.fillText(`${S.roi.x + W - 1}`, cw - 40, ch - 6);
+  for (const [a, col, lw] of series) {
+    if (!a) continue;
+    ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.beginPath(); let pen = false;
+    for (let x = 0; x < W; x++) { const v = a[row * W + x]; if (!(v > 0)) { pen = false; continue; } const yy = Y(-Math.log(v)); pen ? ctx.lineTo(X(x), yy) : ctx.moveTo(X(x), yy); pen = true; }
+    ctx.stroke();
+  }
+  $("lab_prof").textContent = `row y = ${S.roi.y + row} (click on any image to change; gaps = values ≤ 0)`;
+}
+function drawGap(G, Sat) {
+  const c = $("gapChart"), dpr = window.devicePixelRatio || 1, cw = c.clientWidth || 300, ch = 110;
+  c.width = cw * dpr; c.height = ch * dpr; const ctx = c.getContext("2d"); ctx.scale(dpr, dpr); ctx.clearRect(0, 0, cw, ch);
+  if (!G || !G.length) return;
+  const n = G.length, eps = num("eps");
+  let gmin = Infinity; for (const g of G) if (g > 0) gmin = Math.min(gmin, g);
+  const lmin = Math.min(Math.log10(eps > 0 ? eps : 1e-3) - 0.3, isFinite(gmin) ? Math.log10(gmin) : -3), lmax = 0.05;
+  const X = (k) => 4 + (cw - 8) * k / Math.max(1, n - 1), Y = (g) => Math.min(ch - 2, 6 + (ch - 12) * (lmax - Math.log10(Math.max(g, 1e-300))) / (lmax - lmin));
+  if (eps > 0) { ctx.strokeStyle = "#cbd5e1"; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(0, Y(eps)); ctx.lineTo(cw, Y(eps)); ctx.stroke(); ctx.setLineDash([]); }
+  ctx.strokeStyle = "#1f5fbf"; ctx.lineWidth = 1.5; ctx.beginPath();
+  for (let k = 0; k < n; k++) k ? ctx.lineTo(X(k), Y(G[k])) : ctx.moveTo(X(k), Y(G[k])); ctx.stroke();
+  ctx.strokeStyle = "#c2410c"; ctx.beginPath();
+  for (let k = 0; k < n; k++) { const y = 6 + (ch - 12) * (1 - Sat[k]); k ? ctx.lineTo(X(k), y) : ctx.moveTo(X(k), y); } ctx.stroke();
+  ctx.fillStyle = "#6b6f76"; ctx.font = "10px ui-monospace,monospace"; if (eps > 0) ctx.fillText(`ε=${eps}`, cw - 52, Y(eps) - 3);
+}
+function regimeBadge(T) {
+  const g = T.info.regime, n = T.info.nit;
+  if (!g.everActive) return `<span class="badge heat"><b>Linear regime throughout</b> (k = 1…${n}): the projection was never active, so the iterates are exactly the explicit heat flow u ← u + τΔu of r, independent of ℓ<sub>TV</sub>. Stopped early this is a Gaussian-like blur; run to convergence it tends to the constant image (the TV prox for large ℓ<sub>TV</sub>).</span>`;
+  if (T.info.sat > 0) return `<span class="badge tv"><b>TV regime</b>: flux limit active on ${(100 * T.info.sat).toFixed(1)}% of pixels at the final iterate (first activated at k = ${g.firstActive}; maximum ${(100 * g.maxSat).toFixed(1)}%).</span>`;
+  return `<span class="badge tv"><b>Projection active during k = ${g.firstActive}…${g.lastActive}</b>, inactive at the final iterate (k = ${n}); maximum ${(100 * g.maxSat).toFixed(1)}% of pixels.</span>`;
+}
+const STOPTXT = { relative_gap: "relative gap ≤ ε", zero_energy: "E_p = 0 (constant input; u = r is optimal)", rounding_level: "gap at rounding level", max_iter: "maximum iterations reached (NOT converged)", aborted: "aborted" };
+function writeLog(st) {
+  st = st || staleness(); const L = [];
+  L.push(`data: ${S.dataLabel}\nregion: x=${S.roi.x}, y=${S.roi.y}, ${S.rw}×${S.rh} (FNV-1a ${S.rHash})`);
+  if (S.L2) L.push(`\n[Paganin]${st.L2 ? "  STALE" : ""}\n ℓ_PAG = ${S.L2.params.ellPag} px², edge padding 100 px\n time ${(S.L2.ms / 1000).toFixed(2)} s`);
+  if (S.TV) {
+    const T = S.TV, P = T.params, I = T.info;
+    L.push(`\n[TV, Algorithm 1]${st.TV ? "  STALE" : ""}\n ℓ_TV = ${P.ellTV}, τ = ${P.tau}, ε = ${P.eps}, max it = ${P.maxIt}\n iterations ${I.nit} · stop: ${STOPTXT[I.stop] || I.stop}\n G = ${I.G.toExponential(3)}, gap = ${I.gap.toExponential(3)}, E_p = ${I.Ep.toExponential(3)}\n projection active: final ${(100 * I.sat).toFixed(2)}% · first/last k = ${I.regime.firstActive || "–"}/${I.regime.lastActive || "–"}\n time ${(I.ms / 1000).toFixed(1)} s`);
+  }
+  if (S.DD) {
+    const P = S.DD.params, I = S.DD.info;
+    L.push(`\n[D]${st.D ? "  STALE" : ""}\n λ = ℓ_PAG = ${P.lambda}, ℓ_TV = ${S.DD.ellTV} (TV run), z² = ${P.ellDark}, α = ${P.alpha}, β = ${P.beta}\n tol = ${P.tol}, max it = ${P.maxIter}\n iterations ${I.nit} · status: ${I.reason}${I.reason === "converged" ? "" : " (NOT converged)"}\n rel. projected gradient = ${I.rel.toExponential(2)}, objective = ${I.loss.toExponential(6)}\n flux-fit residual ‖R(D)‖/‖R(0)‖ = ${I.relResidual.toFixed(4)}\n strictly convex: ${I.strictlyConvex ? "yes (β > 0)" : "no (β = 0)"}\n time ${(I.ms / 1000).toFixed(1)} s`);
+  }
+  $("log").textContent = L.join("\n");
+}
+
+// ------------------------------------------------------------ parameter widgets
+function updEllPag() { const v = Core.ellPagPx(num("z"), num("E"), num("pix") * 1e-6, num("db")); if (isFinite(v) && v >= 0) $("ellPag").value = +v.toFixed(2); updateLabels(); }
+function updKappa() { $("kappa").textContent = isFinite(S.medGrad) && num("ellTv") > 0 ? `ℓ_TV / median‖∇r‖ ≈ ${(num("ellTv") / S.medGrad).toPrecision(3)}` : ""; }
+function setEllTv(v) { $("ellTv").value = v; if (v > 0) $("ellTvLog").value = Math.log10(v); updKappa(); updateLabels(); }
+function setBeta(v) { $("beta").value = v; $("betaLog").value = v > 0 ? Math.log10(v) : -5; updateLabels(); }
+$("ellTvLog").oninput = () => setEllTv(+Math.pow(10, +$("ellTvLog").value).toPrecision(3));
+$("ellTv").onchange = () => setEllTv(num("ellTv"));
+$("betaLog").oninput = () => setBeta(+Math.pow(10, +$("betaLog").value).toPrecision(3));
+$("beta").onchange = () => setBeta(num("beta"));
+for (const id of ["z", "E", "pix", "db"]) $(id).oninput = updEllPag;
+for (const id of ["ellPag", "tau", "eps", "maxIt", "alpha", "ellDark", "dtol", "dmax"]) $(id).oninput = updateLabels;
+$("satOv").onchange = renderAll;
+
+function applyPreset() {
+  $("z").value = 1; $("E").value = 17; $("pix").value = 5.8; $("db").value = 1146;
+  $("ellPag").value = +Core.ellPagPx(1, 17, 5.8e-6, 1146).toFixed(2);
+  $("tau").value = 0.125; $("eps").value = 0.01; $("maxIt").value = 5000;
+  $("alpha").value = 0; $("ellDark").value = 1; $("dtol").value = 1e-6; $("dmax").value = 20000;
+  setEllTv(0.1); setBeta(0.01); $("satOv").checked = false;
+}
+async function ensurePaperData() {
+  if (S.dataId !== "red-currant-paper") { document.querySelector('input[name=src][value=paper]').checked = true; toggleSrc(); await loadPaperData(); }
+}
+$("presetDefault").onclick = async () => { if (busy) return; await ensurePaperData(); applyPreset(); setROI(600, 700, 512, 512); status("preset: 512² region (the validated region) — press Run all"); };
+$("presetPaper").onclick = async () => { if (busy) return; await ensurePaperData(); applyPreset(); setROI(0, 0, S.W, S.H); status("preset: paper settings on the full 1850×1850 image (a few minutes) — press Run all"); };
+
+// ------------------------------------------------------------ runs
+function setBusy(b) {
+  busy = b;
+  for (const el of document.querySelectorAll("aside input, aside button")) el.disabled = b;
+  $("stop").disabled = !b;
+}
+function status(t, isErr) { $("status").textContent = t; $("status").className = "status" + (isErr ? " err" : ""); }
+function newRunId() { return new Date().toISOString().replace(/[-:]/g, "").replace("T", "-").slice(0, 15); }
+
+async function runPaganin(ver) {
+  const params = readPaganin();
+  status("Paganin filter…");
+  const res = await call({ cmd: "paganin", r: S.r.slice(), H: S.rh, W: S.rw, L: 4 * Math.PI * Math.PI * params.ellPag });
+  if (ver !== S.ver) throw new Error("stale");
+  S.L2 = { u: res.u, params, physical: readPhysical(), ms: res.ms, time: now() };
+  renderAll();
+}
+async function runTV(ver) {
+  const params = readTV(), N = S.rh * S.rw, every = Math.max(1, Math.round(2e6 / N));
+  S.live = { G: [], S: [] }; $("regime").innerHTML = "";
+  const res = await call({ cmd: "tv", r: S.r.slice(), H: S.rh, W: S.rw, ell: params.ellTV, tau: params.tau, eps: params.eps, maxIt: params.maxIt, every }, [],
+    (d) => { S.live.G.push(d.G); S.live.S.push(d.sat); drawGap(S.live.G, S.live.S);
+             status(`TV: k = ${d.k}   G_k = ${d.G.toExponential(2)}   projection active on ${(100 * d.sat).toFixed(1)}%   ${d.ms.toFixed(1)} ms/it`); });
+  if (ver !== S.ver) throw new Error("stale");
+  let pmax = 0; for (let i = 0; i < res.p0.length; i++) pmax = Math.max(pmax, Math.hypot(res.p0[i], res.p1[i]));
+  S.TV = { u: res.u, p0: res.p0, p1: res.p1, pmax, params, id: ++S.tvCount, time: now(),
+           info: { nit: res.nit, G: res.G, gap: res.gap, Ep: res.Ep, sat: res.sat, stop: res.stop, regime: res.regime, ms: res.ms } };
+  S.DD = null;                                     // D depends on u and p
+  S.live = { G: Array.from(res.Ghist), S: Array.from(res.Shist) }; drawGap(S.live.G, S.live.S);
+  $("regime").innerHTML = regimeBadge(S.TV);
+  status(`TV done · ${res.nit} iterations · stop: ${STOPTXT[res.stop] || res.stop} · G = ${res.G.toExponential(2)} · ${(res.ms / 1000).toFixed(1)} s`, res.stop === "max_iter");
+  renderAll();
+}
+async function runD(ver) {
+  if (!S.TV) throw new Error("no TV result: run Paganin + TV first");
+  if (!sameParams(S.TV.params, readTV()))
+    throw new Error(`the TV controls differ from the last TV run (ℓ_TV = ${S.TV.params.ellTV}, τ = ${S.TV.params.tau}, ε = ${S.TV.params.eps}, max it = ${S.TV.params.maxIt}); run TV again or restore those values`);
+  const params = readD();
+  const res = await call({ cmd: "D", u: S.TV.u.slice(), p0: S.TV.p0.slice(), p1: S.TV.p1.slice(), H: S.rh, W: S.rw,
+                           opt: Object.assign({}, params, { ellTV: S.TV.params.ellTV, checkEvery: 10 }) }, [],
+    (d) => status(`D: k = ${d.k}   rel. projected gradient = ${d.rel.toExponential(2)}   ${d.ms.toFixed(1)} ms/it`));
+  if (ver !== S.ver) throw new Error("stale");
+  S.DD = { D: res.D, Rmag: res.Rmag, params, ellTV: S.TV.params.ellTV, tvId: S.TV.id, time: now(),
+           info: { nit: res.nit, rel: res.rel, reason: res.reason, loss: res.loss, relResidual: res.relResidual, strictlyConvex: res.strictlyConvex, ms: res.ms } };
+  const ok = res.reason === "converged" || res.reason === "optimal_at_start";
+  status(`D done · ${res.nit} iterations · status ${res.reason}${ok ? "" : " (NOT converged)"} · ‖R(D)‖/‖R(0)‖ = ${res.relResidual.toFixed(3)} · ${(res.ms / 1000).toFixed(1)} s`, !ok);
+  renderAll();
+}
+async function guarded(stage, fns) {
+  if (busy) return;
+  const v = validate(stage);
+  if (v.err.length) { status("cannot run:\n• " + v.err.join("\n• "), true); return; }
+  setBusy(true); const ver = S.ver; S.runId = newRunId();
+  try { for (const f of fns) await f(ver); if (v.warn.length) status($("status").textContent + "\n⚠ " + v.warn.join("\n⚠ ")); }
+  catch (e) { if (e.message !== "stale") status("error: " + e.message, true); }
+  finally { if (ver === S.ver) setBusy(false); }
+}
+$("runAll").onclick = () => guarded("all", [runPaganin, runTV, runD]);
+$("runTV").onclick = () => guarded("TV", [runPaganin, runTV]);
+$("runD").onclick = () => guarded("D", [runD]);
+$("stop").onclick = () => { newWorker(); S.ver++; setBusy(false); status("stopped — the interrupted computation was discarded", true); };
+
+// ------------------------------------------------------------ export
+function download(bytes, name, type) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([bytes], { type })); a.download = name; a.click(); }
+function metadata() {
+  const st = staleness();
+  return {
+    tool: "TV-Paganin explorer", version: Core.VERSION, exported: now(), runId: S.runId, userAgent: navigator.userAgent,
+    data: Object.assign({ label: S.dataLabel, full_shape: [S.H, S.W] }, S.dataInfo),
+    region: { x0: S.roi.x, y0: S.roi.y, width: S.rw, height: S.rh, fnv1a_hash_of_r: S.rHash },
+    conventions: { arrays: "row-major, axis 0 = y (rows), axis 1 = x", gradient: "forward differences, Neumann BC; div = -grad^T",
+                   p: "paper convention u_TV = r + ell_TV div p; p[0] = y (row) component, p[1] = x (column) component",
+                   paganin_kernel: "1/(1 + ell_PAG |q|^2), q in rad/pixel (= 1/(1 + L k^2), L = 4 pi^2 ell_PAG, k = fftfreq), edge padding 100 px" },
+    paganin: S.L2 ? { params: S.L2.params, physical_inputs_at_run: S.L2.physical, time: S.L2.time, stale: st.L2 } : null,
+    tv: S.TV ? { algorithm: "dual projected gradient: q = p + tau grad(div p + r/ell), p <- q/max(1,|q|) (Algorithm 1 / Eq. 13 of the paper)",
+                 params: S.TV.params,
+                 stopping: "gap <= eps*E_p (relative) or E_p == 0 or gap <= 64*eps_mach*E_p, with gap = ell*sum(|grad u| - grad u . p); else max iterations",
+                 status: S.TV.info, time: S.TV.time, stale: st.TV } : null,
+    D: S.DD ? { algorithm: "projected FISTA with gradient adaptive restart; functional of estimate_positive_D_ridge (pixel-mean scaling)",
+                params: Object.assign({ ellTV_from_TV_run: S.DD.ellTV }, S.DD.params),
+                stopping: "norm of the projected-gradient mapping relative to its initial value < tol (checked every 10 iterations); else max iterations",
+                status: S.DD.info, time: S.DD.time, stale: st.D } : null,
+  };
+}
+const stem = () => `tvpag_${S.runId || "norun"}_x${S.roi.x}_y${S.roi.y}_${S.rw}x${S.rh}`;
+for (const b of document.querySelectorAll("[data-exp]")) b.onclick = () => {
+  const k = b.dataset.exp, H = S.rh, W = S.rw;
+  let arr, shape = [H, W];
+  if (k === "p") { if (!S.TV) { status("nothing to export for p", true); return; } arr = new Float64Array(2 * H * W); arr.set(S.TV.p0); arr.set(S.TV.p1, H * W); shape = [2, H, W]; }
+  else arr = { r: S.r, uL2: S.L2 && S.L2.u, uTV: S.TV && S.TV.u, D: S.DD && S.DD.D, R: S.DD && S.DD.Rmag }[k];
+  if (!arr) { status(`nothing to export for ${k}`, true); return; }
+  download(Core.writeNpy(arr, shape), `${stem()}_${k}.npy`, "application/octet-stream");
+};
+$("expMeta").onclick = () => download(JSON.stringify(metadata(), null, 1), `${stem()}_metadata.json`, "application/json");
+
+// ------------------------------------------------------------ UI wiring
+for (const id of ["rx", "ry", "rw", "rh"]) $(id).onchange = () => setROI(num("rx"), num("ry"), num("rw"), num("rh"));
+function toggleSrc() {
+  const up = document.querySelector('input[name=src][value=upload]').checked;
+  $("file").style.display = up ? "block" : "none"; $("uploadHint").style.display = up ? "block" : "none";
+}
+for (const r of document.querySelectorAll("input[name=src]")) r.onchange = () => {
+  if (busy) return; toggleSrc();
+  if (r.value === "paper" && r.checked) loadPaperData().then(() => setROI(600, 700, 512, 512));
+};
+$("file").onchange = (e) => {
+  const f = e.target.files[0]; if (!f || busy) return;
+  loadUpload(f).catch(err => { $("dataInfo").textContent = "could not use file: " + err.message; $("dataInfo").className = "status err"; });
+};
+(function () {   // ROI drag on overview
+  const c = $("overview"); let start = null;
+  const pos = (e) => { const b = c.getBoundingClientRect(); return [(e.clientX - b.left) / b.width * S.W, (e.clientY - b.top) / b.height * S.H]; };
+  c.onmousedown = (e) => { if (!busy && S.full) start = pos(e); };
+  window.addEventListener("mousemove", (e) => {
+    if (!start || busy) return; const p = pos(e);
+    S.roi = { x: Math.min(start[0], p[0]), y: Math.min(start[1], p[1]), w: Math.abs(p[0] - start[0]), h: Math.abs(p[1] - start[1]) };
+    drawROIbox();
+  });
+  window.addEventListener("mouseup", () => { if (!start) return; start = null; if (busy) return; const q = S.roi; setROI(q.x, q.y, Math.max(16, q.w), Math.max(16, q.h)); });
+})();
+for (const id of ["c_r", "c_l2", "c_tv", "c_p", "c_o", "c_res", "c_d", "c_R"]) $(id).addEventListener("click", (e) => {
+  if (!S.r) return;
+  const b = e.target.getBoundingClientRect(); S.row = Math.max(0, Math.min(S.rh - 1, Math.floor((e.clientY - b.top) / b.height * S.rh))); renderAll();
+});
+window.addEventListener("resize", () => { drawProfile(); drawGap(S.live.G, S.live.S); });
+
+newWorker();
+applyPreset();
+loadPaperData().then(() => setROI(600, 700, 512, 512))
+  .catch(e => { $("dataInfo").textContent = "could not decode embedded data: " + e.message; $("dataInfo").className = "status err"; });
+</script>
+</body>
+</html>

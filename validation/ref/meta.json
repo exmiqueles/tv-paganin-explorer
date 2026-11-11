@@ -1,0 +1,53 @@
+{
+ "ell_pag_px": 197.71343598814974,
+ "L": 7805.413591932567,
+ "ell_tv": 0.1,
+ "tau": 0.125,
+ "eps": 0.001,
+ "nit": 8046,
+ "G": 0.0009999938855189412,
+ "sat": 0.4043846130371094,
+ "roi": [
+  700,
+  600,
+  512
+ ],
+ "D": {
+  "0.1": {
+   "paper": {
+    "msg": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+    "nit": 34,
+    "fun": 0.42954045522074424
+   },
+   "tight": {
+    "msg": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+    "nit": 34,
+    "fun": 0.42954045522074424
+   }
+  },
+  "0.01": {
+   "paper": {
+    "msg": "early stop: rel_loss=2.385e-07",
+    "nit": 70,
+    "fun": 0.21506114370117202
+   },
+   "tight": {
+    "msg": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+    "nit": 98,
+    "fun": 0.21506113916352207
+   }
+  },
+  "0.001": {
+   "paper": {
+    "msg": "early stop: rel_loss=5.059e-07",
+    "nit": 180,
+    "fun": 0.07938353761947692
+   },
+   "tight": {
+    "msg": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+    "nit": 279,
+    "fun": 0.07938350849835342
+   }
+  }
+ }
+}
