@@ -12,12 +12,12 @@ D (reference, 'converged') — L-BFGS-B with ftol = gtol = 1e-12, tol_loss = 1e-
 | quantity | relative L2 error | max abs error | notes |
 |---|---|---|---|
 | input r (uint16 dequantization) | 0.00e+0 | 0.00e+0 |  |
-| u_L2 (Paganin) | 5.05e-16 | 8.88e-16 | 458 ms |
-| u_TV (Algorithm 1) | 0.00e+0 | 0.00e+0 | iterations JS = 8046 / Python = 8046; stop: relative_gap; G = 1.000e-3; 55.3 s |
+| u_L2 (Paganin) | 5.05e-16 | 8.88e-16 | 417 ms |
+| u_TV (Algorithm 1) | 0.00e+0 | 0.00e+0 | iterations JS = 8046 / Python = 8046; stop: relative_gap; G = 1.000e-3; 55.2 s |
 | p (dual field) | 0.00e+0 | 0.00e+0 | sat JS=40.44% / Py=40.44% |
 | D, beta=0.1 | 2.08e-6 | 4.09e-5 | JS: 120 it (converged), 0.8 s; F_JS/F_Py-1 = -1.58e-12; paper-setting L-BFGS-B vs converged: 0.00e+0 |
-| D, beta=0.01 | 4.12e-6 | 2.37e-4 | JS: 450 it (converged), 3.3 s; F_JS/F_Py-1 = -1.38e-11; paper-setting L-BFGS-B vs converged: 1.19e-4 |
-| D, beta=0.001 | 1.45e-5 | 6.90e-4 | JS: 1160 it (converged), 8.0 s; F_JS/F_Py-1 = -1.99e-10; paper-setting L-BFGS-B vs converged: 6.10e-4 |
+| D, beta=0.01 | 4.12e-6 | 2.37e-4 | JS: 450 it (converged), 3.0 s; F_JS/F_Py-1 = -1.38e-11; paper-setting L-BFGS-B vs converged: 1.19e-4 |
+| D, beta=0.001 | 1.45e-5 | 6.90e-4 | JS: 1160 it (converged), 6.5 s; F_JS/F_Py-1 = -1.99e-10; paper-setting L-BFGS-B vs converged: 6.10e-4 |
 
 ## B. Effect of the 16-bit quantization of the embedded data (Python only: quantized vs original float64 input, same pipeline)
 

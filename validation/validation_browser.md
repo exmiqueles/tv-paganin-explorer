@@ -1,6 +1,6 @@
 | result | browser test (Chromium, headless) | detail |
 |---|---|---|
-| PASS | Run all (512² preset): TV and D converge, TV regime reported | D done · 330 iterations · status converged · ‖R(D)‖/‖R(0)‖ = 0.460 · 2.2 s / TV regime: flux limit active on 25.8% of pixels at the final |
+| PASS | Run all (512² preset): TV and D converge, TV regime reported | D done · 330 iterations · status converged · ‖R(D)‖/‖R(0)‖ = 0.460 · 2.0 s / TV regime: flux limit active on 25.8% of pixels at the final |
 | PASS | run log lists parameters and convergence |  |
 | PASS | item 1: changing ℓ_TV marks u_TV/p and D as STALE | ℓ_TV = 0.1 · 1477 it · STALE: parameters changed |
 | PASS | item 1: "D only" refuses to mix u,p from ℓ_TV = 0.1 with ℓ_TV = 0.05 | error: the TV controls differ from the last TV run (ℓ_TV = 0.1, τ = 0.125, ε = 0.01, max i |
@@ -18,6 +18,6 @@
 | PASS | item 9: a negative pixel is painted magenta | [217, 70, 239] |
 | PASS | item 3: constant image stops at k = 1 with G = 0 (no NaN) | TV done · 1 iterations · stop: E_p = 0 (constant input; u = r is optimal) · G = 0.00e+0 ·  |
 | PASS | item 4: ℓ_TV = 1000 → "linear regime throughout" (history-based) | Linear regime throughout (k = 1…300): the projection was never active, |
-| PASS | item 10: metadata JSON has version, region, parameters, stopping rule and status | file tvpag_20261110-203331_x600_y700_512x512_metadata.json |
-| PASS | item 10: array file names share the run id with the metadata | tvpag_20261110-203331_x600_y700_512x512_uTV.npy |
+| PASS | item 10: metadata JSON has version, region, parameters, stopping rule and status | file tvpag_20261123-153345_x600_y700_512x512_metadata.json |
+| PASS | item 10: array file names share the run id with the metadata | tvpag_20261123-153345_x600_y700_512x512_uTV.npy |
 | PASS | no JavaScript errors during the session |  |
