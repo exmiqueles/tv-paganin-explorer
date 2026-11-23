@@ -126,11 +126,11 @@
     <div class="slider"><input type="range" id="betaLog" min="-5" max="0" step="0.25"><input type="number" id="beta" step="any"></div>
     <div class="grid2">
       <div><label>α</label><input type="number" id="alpha" step="any" min="0"></div>
-      <div><label>z² (ℓ<sub>dark</sub>)</label><input type="number" id="ellDark" step="any"></div>
+      <div><label>ℓ<sub>dark</sub> (numerical z²)</label><input type="number" id="ellDark" step="any"></div>
       <div><label>tolerance</label><input type="number" id="dtol" step="any"></div>
       <div><label>max iterations</label><input type="number" id="dmax" step="1000"></div>
     </div>
-    <div class="hint">Minimizes ½⟨|ℓ<sub>TV</sub>p − ℓ<sub>PAG</sub>∇u + z²∇(Du)|²⟩ + ½α⟨|∇D|²⟩ + ½β⟨D²⟩ over D ≥ 0 (⟨·⟩: pixel mean), with u, p and ℓ<sub>TV</sub> of the last TV run.</div>
+    <div class="hint">Minimizes ½⟨|ℓ<sub>TV</sub>p − ℓ<sub>PAG</sub>∇u + ℓ<sub>dark</sub>∇(Du)|²⟩ + ½α⟨|∇D|²⟩ + ½β⟨D²⟩ over D ≥ 0 (⟨·⟩: pixel mean), with u, p and ℓ<sub>TV</sub> of the last TV run. Gradients are in pixels, so ℓ<sub>dark</sub> plays the role of (z/Δx)² up to a constant; the colorbar reports the dimensionless D of the paper, D = D<sub>num</sub> ℓ<sub>dark</sub> (Δx/z)², as in Fig. 4.</div>
   </section>
 
   <section class="ctl">
@@ -274,7 +274,7 @@ function validate(stage) {
     if (!(isInt(T.maxIt) && T.maxIt >= 1 && T.maxIt <= 1e6)) err.push("TV max iterations must be an integer in [1, 10⁶]");
   }
   if (stage !== "TV") {
-    if (!(fin(D.ellDark) && D.ellDark > 0)) err.push("z² (ℓ_dark) must be a finite number > 0");
+    if (!(fin(D.ellDark) && D.ellDark > 0)) err.push("ℓ_dark must be a finite number > 0");
     if (!(fin(D.alpha) && D.alpha >= 0)) err.push("α must be a finite number ≥ 0");
     if (!(fin(D.beta) && D.beta >= 0)) err.push("β must be a finite number ≥ 0");
     if (!(fin(D.tol) && D.tol > 0 && D.tol < 1)) err.push("D tolerance must satisfy 0 < tol < 1");
@@ -469,7 +469,7 @@ function renderAll() {
   if (S.DD) {
     const [hiD] = percentile(S.DD.D, [99.5]); const s = 255 / (hiD || 1);
     paint($("c_d"), H, W, (i) => VIR[Math.max(0, Math.min(255, Math.round(S.DD.D[i] * s)))]);
-    $("dmaxlab").textContent = hiD.toExponential(2) + " (p99.5)";
+    $("dmaxlab").textContent = (hiD * S.DD.dScale).toExponential(2) + " (p99.5, dimensionless D)";
     const [hiR] = percentile(S.DD.Rmag, [99.5]); const sR = 255 / (hiR || 1);
     paint($("c_R"), H, W, (i) => { const v = 255 - Math.max(0, Math.min(255, S.DD.Rmag[i] * sR)); return [v, v, v]; });
     $("Rmaxlab").textContent = hiR.toExponential(2) + " (p99.5)";
@@ -557,7 +557,7 @@ function writeLog(st) {
   }
   if (S.DD) {
     const P = S.DD.params, I = S.DD.info;
-    L.push(`\n[D]${st.D ? "  STALE" : ""}\n λ = ℓ_PAG = ${P.lambda}, ℓ_TV = ${S.DD.ellTV} (TV run), z² = ${P.ellDark}, α = ${P.alpha}, β = ${P.beta}\n tol = ${P.tol}, max it = ${P.maxIter}\n iterations ${I.nit} · status: ${I.reason}${I.reason === "converged" ? "" : " (NOT converged)"}\n rel. projected gradient = ${I.rel.toExponential(2)}, objective = ${I.loss.toExponential(6)}\n flux-fit residual ‖R(D)‖/‖R(0)‖ = ${I.relResidual.toFixed(4)}\n strictly convex: ${I.strictlyConvex ? "yes (β > 0)" : "no (β = 0)"}\n time ${(I.ms / 1000).toFixed(1)} s`);
+    L.push(`\n[D]${st.D ? "  STALE" : ""}\n λ = ℓ_PAG = ${P.lambda}, ℓ_TV = ${S.DD.ellTV} (TV run), ℓ_dark = ${P.ellDark} (D scale to dimensionless = ${S.DD.dScale.toExponential(3)}), α = ${P.alpha}, β = ${P.beta}\n tol = ${P.tol}, max it = ${P.maxIter}\n iterations ${I.nit} · status: ${I.reason}${I.reason === "converged" ? "" : " (NOT converged)"}\n rel. projected gradient = ${I.rel.toExponential(2)}, objective = ${I.loss.toExponential(6)}\n flux-fit residual ‖R(D)‖/‖R(0)‖ = ${I.relResidual.toFixed(4)}\n strictly convex: ${I.strictlyConvex ? "yes (β > 0)" : "no (β = 0)"}\n time ${(I.ms / 1000).toFixed(1)} s`);
   }
   $("log").textContent = L.join("\n");
 }
@@ -630,7 +630,8 @@ async function runD(ver) {
                            opt: Object.assign({}, params, { ellTV: S.TV.params.ellTV, checkEvery: 10 }) }, [],
     (d) => status(`D: k = ${d.k}   rel. projected gradient = ${d.rel.toExponential(2)}   ${d.ms.toFixed(1)} ms/it`));
   if (ver !== S.ver) throw new Error("stale");
-  S.DD = { D: res.D, Rmag: res.Rmag, params, ellTV: S.TV.params.ellTV, tvId: S.TV.id, time: now(),
+  const ph = readPhysical(), dScale = params.ellDark * Math.pow(ph.pixel_um * 1e-6 / ph.z_m, 2);
+  S.DD = { D: res.D, Rmag: res.Rmag, params, dScale, physical: ph, ellTV: S.TV.params.ellTV, tvId: S.TV.id, time: now(),
            info: { nit: res.nit, rel: res.rel, reason: res.reason, loss: res.loss, relResidual: res.relResidual, strictlyConvex: res.strictlyConvex, ms: res.ms } };
   const ok = res.reason === "converged" || res.reason === "optimal_at_start";
   status(`D done · ${res.nit} iterations · status ${res.reason}${ok ? "" : " (NOT converged)"} · ‖R(D)‖/‖R(0)‖ = ${res.relResidual.toFixed(3)} · ${(res.ms / 1000).toFixed(1)} s`, !ok);
@@ -668,6 +669,8 @@ function metadata() {
                  status: S.TV.info, time: S.TV.time, stale: st.TV } : null,
     D: S.DD ? { algorithm: "projected FISTA with gradient adaptive restart; functional of estimate_positive_D_ridge (pixel-mean scaling)",
                 params: Object.assign({ ellTV_from_TV_run: S.DD.ellTV }, S.DD.params),
+                exported_D: "numerical D (D_num); dimensionless D of the paper = D_num * D_scale_to_dimensionless",
+                D_scale_to_dimensionless: S.DD.dScale, physical_inputs_at_run: S.DD.physical,
                 stopping: "norm of the projected-gradient mapping relative to its initial value < tol (checked every 10 iterations); else max iterations",
                 status: S.DD.info, time: S.DD.time, stale: st.D } : null,
   };
