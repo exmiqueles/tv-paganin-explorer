@@ -98,8 +98,6 @@ all tests passed
 * Numerical comparison on the full 1850x1850 image (only the 512x512 region was compared; the full-image
   run was only timed, ~90 ms per TV iteration in Chromium). Agreement is expected because the same code path
   is used, but it was not measured.
-* D for beta = 1e-4, and D with alpha > 0, against the Python implementation (alpha > 0 was only checked by an
-  independent reviewer against a coordinate-descent solver on a small problem).
 * Upload of 8-bit images (PNG/JPEG); only .npy uploads were tested.
 * Any physical meaning of D: the tests concern the discrete optimization problem only.
 
